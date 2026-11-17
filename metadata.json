@@ -1,0 +1,6 @@
+{
+  "name": "Mi Taller",
+  "description": "Gestión industrial del hogar para inventario de herramientas, lista de compras de repuestos y tablero de notas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

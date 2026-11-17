@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Taller Multiespacio — Inventario, Repuestos y Notas</title>
+    <meta
+      name="description"
+      content="Gestión de taller industrial para el hogar: inventario de herramientas, lista inteligente de repuestos y tablero de notas."
+    />
+    <meta property="og:title" content="Taller Multiespacio — Inventario, Repuestos y Notas" />
+    <meta
+      property="og:description"
+      content="Gestión de taller industrial para el hogar: inventario de herramientas, lista inteligente de repuestos y tablero de notas."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('mi_taller_theme');
+          if (saved === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-[#F3F4F6] text-[#111827] dark:bg-[#121417] dark:text-[#F3F4F6] antialiased selection:bg-[#F59E0B]/30 selection:text-[#F59E0B]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
