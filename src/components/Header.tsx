@@ -1,6 +1,7 @@
 import { Moon, Sun } from 'lucide-react';
 import { motion } from 'motion/react';
 import { TabId, ThemeMode } from '../types/workshop';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
   activeTab: TabId;
@@ -88,8 +89,9 @@ export function Header({
           })}
         </nav>
 
-        {/* Zona 3: Botón alternar Modo Oscuro / Claro */}
-        <div className="flex shrink-0 items-center">
+        {/* Zona 3: Instalar PWA (si aplica) + Botón alternar Modo Oscuro / Claro */}
+        <div className="flex shrink-0 items-center gap-2">
+          <PWAInstallButton />
           <button
             type="button"
             onClick={onToggleTheme}

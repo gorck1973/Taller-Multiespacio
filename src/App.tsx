@@ -1,9 +1,11 @@
+import { Download, Upload } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Header } from './components/Header';
 import { InventoryTab } from './components/InventoryTab';
 import { LoanModal } from './components/LoanModal';
 import { NotesTab } from './components/NotesTab';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { ShoppingTab } from './components/ShoppingTab';
 import { ToolFormModal } from './components/ToolFormModal';
 import {
@@ -73,6 +75,61 @@ export default function App() {
   const [preselectedToolForShopping, setPreselectedToolForShopping] = useState<
     string | null
   >(null);
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showBackupNotice = (msg: string) => {
+    setBackupNotice(msg);
+    window.setTimeout(() => setBackupNotice(null), 3500);
+  };
+
+  const handleExportBackup = () => {
+    const payload = {
+      app: 'Taller Multiespacio',
+      exportedAt: new Date().toISOString(),
+      tools,
+      shoppingItems,
+      notes,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `taller-multiespacio-respaldo-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showBackupNotice('Respaldo descargado');
+  };
+
+  const handleImportBackup = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        if (
+          Array.isArray(parsed.tools) &&
+          Array.isArray(parsed.shoppingItems) &&
+          Array.isArray(parsed.notes)
+        ) {
+          setTools(parsed.tools);
+          setShoppingItems(parsed.shoppingItems);
+          setNotes(parsed.notes);
+          showBackupNotice('Respaldo restaurado correctamente');
+        } else {
+          showBackupNotice('El archivo no tiene el formato de respaldo');
+        }
+      } catch {
+        showBackupNotice('No se pudo leer el archivo JSON');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -279,11 +336,45 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <footer className="border-t border-gray-200 bg-white/70 py-4 text-center text-xs text-gray-500 transition-colors dark:border-[#2A303A] dark:bg-[#121417] dark:text-gray-400">
-        <div className="mx-auto max-w-[1280px] px-4 sm:px-6">
-          © 2026. Desarrollo Web e IA por GORCK.
+      <footer className="border-t border-gray-200 bg-white/70 py-4 text-xs text-gray-500 transition-colors dark:border-[#2A303A] dark:bg-[#121417] dark:text-gray-400">
+        <div className="mx-auto flex max-w-[1280px] flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6">
+          <span>© 2026. Desarrollo Web e IA por GORCK.</span>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {backupNotice && (
+              <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                {backupNotice}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:border-[#F59E0B] hover:text-gray-950 dark:border-[#2E3440] dark:text-gray-300 dark:hover:border-[#F59E0B]/70 dark:hover:text-white"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Exportar respaldo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:border-[#F59E0B] hover:text-gray-950 dark:border-[#2E3440] dark:text-gray-300 dark:hover:border-[#F59E0B]/70 dark:hover:text-white"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span>Importar respaldo</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              onChange={handleImportBackup}
+              className="hidden"
+              aria-label="Importar archivo de respaldo JSON"
+            />
+          </div>
         </div>
       </footer>
+
+      <OfflineIndicator />
 
       <ToolFormModal
         isOpen={toolModalOpen}
