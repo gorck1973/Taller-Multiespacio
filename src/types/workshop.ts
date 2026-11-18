@@ -16,6 +16,20 @@ export type ToolLocationZone =
 
 export type ToolStatus = 'Disponible' | 'Prestada';
 
+export type ToolIconId =
+  | 'taladro'
+  | 'amoladora'
+  | 'sierra'
+  | 'llave'
+  | 'martillo'
+  | 'destornillador'
+  | 'nivel'
+  | 'medicion'
+  | 'jardineria'
+  | 'ferreteria'
+  | 'soldadora'
+  | 'generica';
+
 export interface Tool {
   id: string;
   nombre: string;
@@ -27,6 +41,8 @@ export interface Tool {
   estado: ToolStatus;
   prestadaA?: string;
   fechaPrestamo?: string;
+  icono?: ToolIconId;
+  foto?: string;
   createdAt: string;
 }
 

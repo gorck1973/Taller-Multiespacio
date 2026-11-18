@@ -1,11 +1,18 @@
-import { X } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react';
+import { Camera, Trash2, X } from 'lucide-react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Tool,
   ToolCategory,
+  ToolIconId,
   ToolLocationZone,
   ToolStatus,
 } from '../types/workshop';
+import { compressToolPhoto } from '../utils/imageCompressor';
+import {
+  inferToolIcon,
+  TOOL_ICON_OPTIONS,
+  ToolIcon,
+} from './ToolIcon';
 
 interface ToolFormModalProps {
   isOpen: boolean;
@@ -45,6 +52,12 @@ export function ToolFormModal({
   const [fechaPrestamo, setFechaPrestamo] = useState(
     new Date().toISOString().split('T')[0]
   );
+  const [icono, setIcono] = useState<ToolIconId | undefined>(undefined);
+  const [foto, setFoto] = useState<string | undefined>(undefined);
+  const [photoInfo, setPhotoInfo] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editingTool) {
@@ -59,6 +72,10 @@ export function ToolFormModal({
       setFechaPrestamo(
         editingTool.fechaPrestamo || new Date().toISOString().split('T')[0]
       );
+      setIcono(editingTool.icono);
+      setFoto(editingTool.foto);
+      setPhotoInfo(editingTool.foto ? 'Foto guardada' : null);
+      setPhotoError(null);
     } else {
       setNombre('');
       setMarca('');
@@ -69,10 +86,38 @@ export function ToolFormModal({
       setEstado('Disponible');
       setPrestadaA('');
       setFechaPrestamo(new Date().toISOString().split('T')[0]);
+      setIcono(undefined);
+      setFoto(undefined);
+      setPhotoInfo(null);
+      setPhotoError(null);
     }
   }, [editingTool, isOpen]);
 
   if (!isOpen) return null;
+
+  const effectiveIcon: ToolIconId = icono || inferToolIcon(nombre, categoria);
+  const activeIconLabel =
+    TOOL_ICON_OPTIONS.find((opt) => opt.id === effectiveIcon)?.label ??
+    'General';
+
+  const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError(null);
+    setCompressing(true);
+    try {
+      const result = await compressToolPhoto(file);
+      setFoto(result.dataUrl);
+      setPhotoInfo(`Optimizada · ${result.sizeKB} KB`);
+    } catch (err) {
+      setPhotoError(
+        err instanceof Error ? err.message : 'Error al procesar la foto.'
+      );
+    } finally {
+      setCompressing(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -89,6 +134,8 @@ export function ToolFormModal({
         estado,
         prestadaA: estado === 'Prestada' ? prestadaA.trim() : undefined,
         fechaPrestamo: estado === 'Prestada' ? fechaPrestamo : undefined,
+        icono,
+        foto,
       },
       editingTool?.id
     );
@@ -238,6 +285,114 @@ export function ToolFormModal({
               placeholder="Ej. Estante metálico B · Bandeja inferior"
               className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-950 placeholder:text-gray-400 focus:border-[#F59E0B] focus:outline-none dark:border-[#323946] dark:bg-[#121417] dark:text-white dark:placeholder:text-gray-500"
             />
+          </div>
+
+          {/* Identificador visual: Foto miniatura opcional o Ícono industrial */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-3.5 dark:border-[#2E3440] dark:bg-[#14171C]">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                Ícono o foto miniatura
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {foto
+                  ? 'Mostrando foto real'
+                  : `${activeIconLabel}${icono ? '' : ' (auto)'}`}
+              </span>
+            </div>
+
+            <div className="mt-3 flex items-center gap-3.5">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-700 dark:border-[#323946] dark:bg-[#1E2229] dark:text-[#F59E0B]">
+                {foto ? (
+                  <img
+                    src={foto}
+                    alt={nombre || 'Vista previa'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ToolIcon icon={effectiveIcon} className="h-7 w-7" />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={compressing}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 transition-colors hover:border-[#F59E0B] hover:text-gray-950 disabled:opacity-60 dark:border-[#323946] dark:bg-[#1E2229] dark:text-gray-200 dark:hover:border-[#F59E0B]"
+                  >
+                    <Camera className="h-3.5 w-3.5 text-[#F59E0B]" />
+                    <span>
+                      {compressing
+                        ? 'Optimizando...'
+                        : foto
+                          ? 'Cambiar foto'
+                          : 'Subir / Tomar foto'}
+                    </span>
+                  </button>
+
+                  {foto && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFoto(undefined);
+                        setPhotoInfo(null);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Quitar</span>
+                    </button>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    aria-label="Seleccionar o tomar foto de la herramienta"
+                  />
+                </div>
+
+                {photoError ? (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {photoError}
+                  </p>
+                ) : photoInfo ? (
+                  <p className="font-mono text-xs text-emerald-700 dark:text-emerald-400">
+                    {photoInfo}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Opcional. Se comprime automáticamente para funcionar sin
+                    conexión.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-6 gap-1.5 border-t border-gray-200/80 pt-3 dark:border-[#2A303A]">
+              {TOOL_ICON_OPTIONS.map((opt) => {
+                const isSelected = effectiveIcon === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    title={opt.label}
+                    aria-label={`Elegir ícono ${opt.label}`}
+                    onClick={() => setIcono(opt.id)}
+                    className={`flex h-9 items-center justify-center rounded-lg border transition-all ${
+                      isSelected
+                        ? 'border-[#F59E0B] bg-[#F59E0B]/15 text-[#B45309] dark:text-[#F59E0B]'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-950 dark:border-[#2A303A] dark:bg-[#1E2229] dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <ToolIcon icon={opt.id} className="h-[18px] w-[18px]" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>

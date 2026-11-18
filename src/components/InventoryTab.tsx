@@ -9,14 +9,17 @@ import {
   Trash2,
   UserCheck,
   Wrench,
+  X,
+  ZoomIn,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ShoppingItem,
   Tool,
   ToolCategory,
   ToolLocationZone,
 } from '../types/workshop';
+import { resolveToolIcon, ToolIcon } from './ToolIcon';
 
 interface InventoryTabProps {
   tools: Tool[];
@@ -81,6 +84,16 @@ export function InventoryTab({
     'Todas'
   );
   const [onlyPendingParts, setOnlyPendingParts] = useState(false);
+  const [zoomedTool, setZoomedTool] = useState<Tool | null>(null);
+
+  useEffect(() => {
+    if (!zoomedTool) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomedTool(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [zoomedTool]);
 
   const pendingPartsByTool = useMemo(() => {
     const map = new Map<string, ShoppingItem[]>();
@@ -381,19 +394,50 @@ export function InventoryTab({
                 <div>
                   {/* Cabecera de la tarjeta */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-                        <span>{tool.marca}</span>
-                        <span aria-hidden="true">·</span>
-                        <span>{tool.categoria}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="font-mono text-gray-700 dark:text-gray-300">
-                          {tool.modelo}
-                        </span>
+                    <div className="flex min-w-0 items-start gap-3">
+                      {tool.foto ? (
+                        <button
+                          type="button"
+                          onClick={() => setZoomedTool(tool)}
+                          aria-label={`Ampliar foto de ${tool.nombre}`}
+                          title="Toca para ampliar la foto"
+                          className="group/thumb relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 transition-colors hover:border-[#F59E0B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F59E0B] dark:border-[#323946] dark:bg-[#121417]"
+                        >
+                          <img
+                            src={tool.foto}
+                            alt={tool.nombre}
+                            className="h-full w-full object-cover transition-transform duration-200 group-hover/thumb:scale-105"
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity duration-150 group-hover/thumb:opacity-100">
+                            <ZoomIn className="h-4 w-4 text-white" />
+                          </span>
+                        </button>
+                      ) : (
+                        <div
+                          aria-hidden="true"
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-700 transition-colors group-hover:border-[#F59E0B]/45 group-hover:text-[#B45309] dark:border-[#2E3440] dark:bg-[#14171C] dark:text-[#F59E0B]/90 dark:group-hover:border-[#F59E0B]/55 dark:group-hover:text-[#F59E0B]"
+                        >
+                          <ToolIcon
+                            icon={resolveToolIcon(tool)}
+                            className="h-6 w-6"
+                          />
+                        </div>
+                      )}
+
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                          <span>{tool.marca}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{tool.categoria}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono text-gray-700 dark:text-gray-300">
+                            {tool.modelo}
+                          </span>
+                        </div>
+                        <h2 className="font-display mt-0.5 text-lg font-bold leading-snug text-gray-950 dark:text-white">
+                          {tool.nombre}
+                        </h2>
                       </div>
-                      <h2 className="font-display mt-1 text-lg font-bold leading-snug text-gray-950 dark:text-white">
-                        {tool.nombre}
-                      </h2>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1">
@@ -590,6 +634,53 @@ export function InventoryTab({
               </article>
             );
           })}
+        </div>
+      )}
+
+      {/* Visor rápido para foto ampliada */}
+      {zoomedTool && zoomedTool.foto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="zoom-photo-title"
+          onClick={() => setZoomedTool(null)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-[#2E3440] dark:bg-[#1E2229]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-gray-200 px-5 py-3.5 dark:border-[#2A303A]">
+              <div className="min-w-0">
+                <h3
+                  id="zoom-photo-title"
+                  className="font-display truncate text-base font-bold text-gray-950 dark:text-white"
+                >
+                  {zoomedTool.nombre}
+                </h3>
+                <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                  {zoomedTool.marca} ·{' '}
+                  <span className="font-mono">{zoomedTool.modelo}</span> ·{' '}
+                  {zoomedTool.ubicacionZona}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setZoomedTool(null)}
+                aria-label="Cerrar foto"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-[#2A303A] dark:hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="bg-gray-100 p-3 dark:bg-[#121417]">
+              <img
+                src={zoomedTool.foto}
+                alt={zoomedTool.nombre}
+                className="max-h-[70vh] w-full rounded-lg object-contain"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
