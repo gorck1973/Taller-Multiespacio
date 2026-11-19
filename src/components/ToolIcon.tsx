@@ -1,19 +1,37 @@
 import { Tool, ToolCategory, ToolIconId } from '../types/workshop';
 
 export const TOOL_ICON_OPTIONS: { id: ToolIconId; label: string }[] = [
-  { id: 'taladro', label: 'Taladro' },
-  { id: 'amoladora', label: 'Amoladora' },
+  { id: 'esmeril', label: 'Esmeril' },
   { id: 'sierra', label: 'Sierra' },
-  { id: 'llave', label: 'Llave' },
-  { id: 'martillo', label: 'Martillo' },
-  { id: 'destornillador', label: 'Destornillador' },
-  { id: 'nivel', label: 'Nivel' },
+  { id: 'lijadora', label: 'Lijadora' },
+  { id: 'taladro', label: 'Taladro' },
+  { id: 'llaves', label: 'Llaves' },
   { id: 'medicion', label: 'Medición' },
-  { id: 'jardineria', label: 'Jardinería' },
+  { id: 'pintura', label: 'Pintura' },
   { id: 'ferreteria', label: 'Ferretería' },
-  { id: 'soldadora', label: 'Soldadora' },
-  { id: 'generica', label: 'Caja / General' },
+  { id: 'caja', label: 'Caja de herramientas' },
 ];
+
+const LEGACY_ICON_MAP: Record<string, ToolIconId> = {
+  amoladora: 'esmeril',
+  llave: 'llaves',
+  nivel: 'medicion',
+  generica: 'caja',
+  martillo: 'caja',
+  destornillador: 'llaves',
+  jardineria: 'caja',
+  soldadora: 'esmeril',
+};
+
+const VALID_ICON_IDS = new Set<string>(TOOL_ICON_OPTIONS.map((o) => o.id));
+
+export function normalizeToolIconId(
+  icon?: string
+): ToolIconId | undefined {
+  if (!icon) return undefined;
+  if (VALID_ICON_IDS.has(icon)) return icon as ToolIconId;
+  return LEGACY_ICON_MAP[icon];
+}
 
 export function inferToolIcon(
   nombre: string,
@@ -21,58 +39,56 @@ export function inferToolIcon(
 ): ToolIconId {
   const text = nombre.toLowerCase();
 
-  if (/(amoladora|esmeril|pulidora|radial|disco)/.test(text)) {
-    return 'amoladora';
-  }
-  if (/(taladro|percutor|rotomartillo|atornillador|barreno)/.test(text)) {
-    return 'taladro';
+  if (/(esmeril|amoladora|pulidora|radial|disco|desbaste)/.test(text)) {
+    return 'esmeril';
   }
   if (/(sierra|caladora|ingletadora|cortadora|serrucho)/.test(text)) {
     return 'sierra';
   }
-  if (/(martillo|mazo|combo|cincel)/.test(text)) {
-    return 'martillo';
+  if (/(lijadora|lija|orbital|rotoorbital|cepilladora)/.test(text)) {
+    return 'lijadora';
   }
-  if (/(destornillador|desarmador|puntas)/.test(text)) {
-    return 'destornillador';
+  if (/(taladro|percutor|rotomartillo|atornillador|barreno)/.test(text)) {
+    return 'taladro';
   }
-  if (/(llave|alicate|pinza|prensa|sargento|dado|trinquete|matraca)/.test(text)) {
-    return 'llave';
+  if (/(llave|alicate|pinza|prensa|sargento|dado|trinquete|matraca|destornillador)/.test(text)) {
+    return 'llaves';
   }
-  if (/(nivel|láser|laser|plomada)/.test(text)) {
-    return 'nivel';
-  }
-  if (/(metro|huincha|cinta|calibre|pie de rey|escuadra|multímetro|multimetro|tester|regla)/.test(text)) {
+  if (/(nivel|láser|laser|metro|huincha|cinta|calibre|pie de rey|escuadra|multímetro|multimetro|tester|regla|plomada)/.test(text)) {
     return 'medicion';
   }
-  if (/(soldad|inverter|cautín|cautin|pistola de calor|compresor|eléctr)/.test(text)) {
-    return 'soldadora';
+  if (/(pintura|rodillo|brocha|pincel|pistola de pintar|compresor|aerógrafo|aerografo|esmalte)/.test(text)) {
+    return 'pintura';
   }
-  if (/(poda|tijera|bordeadora|cortacésped|desmalezadora|sopladora|motosierra|jardín|jardin|pala|rastrillo)/.test(text)) {
-    return 'jardineria';
-  }
-  if (/(tornillo|tuerca|perno|clavo|tarugo|remache|bisagra)/.test(text)) {
+  if (/(tornillo|tuerca|perno|clavo|tarugo|remache|bisagra|ferretería|ferreteria)/.test(text)) {
     return 'ferreteria';
+  }
+  if (/(caja|maletín|maletin|estuche|organizador|baúl|baul|bolso)/.test(text)) {
+    return 'caja';
   }
 
   switch (categoria) {
     case 'Eléctricas':
       return 'taladro';
     case 'Manuales':
-      return 'llave';
+      return 'llaves';
     case 'Medición':
       return 'medicion';
-    case 'Jardinería':
-      return 'jardineria';
     case 'Ferretería':
       return 'ferreteria';
+    case 'Jardinería':
     default:
-      return 'generica';
+      return 'caja';
   }
 }
 
-export function resolveToolIcon(tool: Pick<Tool, 'icono' | 'nombre' | 'categoria'>): ToolIconId {
-  return tool.icono || inferToolIcon(tool.nombre, tool.categoria);
+export function resolveToolIcon(
+  tool: Pick<Tool, 'icono' | 'nombre' | 'categoria'>
+): ToolIconId {
+  return (
+    normalizeToolIconId(tool.icono) ||
+    inferToolIcon(tool.nombre, tool.categoria)
+  );
 }
 
 interface ToolIconProps {
@@ -93,23 +109,7 @@ export function ToolIcon({ icon, className = 'h-6 w-6' }: ToolIconProps) {
   };
 
   switch (icon) {
-    case 'taladro':
-      return (
-        <svg {...shared}>
-          {/* Cuerpo del taladro */}
-          <path d="M4 7.5C4 6.7 4.7 6 5.5 6H14.5V12H5.5C4.7 12 4 11.3 4 10.5V7.5Z" />
-          {/* Mandril y broca */}
-          <path d="M14.5 7.5H17.5V10.5H14.5" />
-          <path d="M17.5 9H21.5" />
-          {/* Empuñadura y batería */}
-          <path d="M8 12L6.5 18.5H10.5L11.5 12" />
-          <path d="M5.5 18.5H11.5V20.5H5.5V18.5Z" />
-          {/* Gatillo */}
-          <path d="M11.3 13.5H12.8" />
-        </svg>
-      );
-
-    case 'amoladora':
+    case 'esmeril':
       return (
         <svg {...shared}>
           {/* Disco de corte */}
@@ -127,7 +127,7 @@ export function ToolIcon({ icon, className = 'h-6 w-6' }: ToolIconProps) {
     case 'sierra':
       return (
         <svg {...shared}>
-          {/* Hoja circular con dientes */}
+          {/* Hoja de sierra circular con dientes */}
           <circle cx="12" cy="12" r="7" />
           <circle cx="12" cy="12" r="2.2" />
           <path d="M12 2.5V5" />
@@ -141,7 +141,38 @@ export function ToolIcon({ icon, className = 'h-6 w-6' }: ToolIconProps) {
         </svg>
       );
 
-    case 'llave':
+    case 'lijadora':
+      return (
+        <svg {...shared}>
+          {/* Base abrasiva plana */}
+          <path d="M3.5 17.5H20.5" />
+          <rect x="4" y="14.5" width="16" height="3" rx="0.8" />
+          {/* Cuerpo motor de lijadora */}
+          <path d="M6 14.5V10.5C6 9.4 6.9 8.5 8 8.5H15C16.7 8.5 18 9.8 18 11.5V14.5" />
+          {/* Empuñadura superior */}
+          <path d="M9 8.5V6.5C9 5.7 9.7 5 10.5 5H14C15.1 5 16 5.9 16 7V8.5" />
+          {/* Toma de polvo lateral */}
+          <path d="M6 11H3.5" />
+        </svg>
+      );
+
+    case 'taladro':
+      return (
+        <svg {...shared}>
+          {/* Cuerpo del taladro */}
+          <path d="M4 7.5C4 6.7 4.7 6 5.5 6H14.5V12H5.5C4.7 12 4 11.3 4 10.5V7.5Z" />
+          {/* Mandril y broca */}
+          <path d="M14.5 7.5H17.5V10.5H14.5" />
+          <path d="M17.5 9H21.5" />
+          {/* Empuñadura y batería */}
+          <path d="M8 12L6.5 18.5H10.5L11.5 12" />
+          <path d="M5.5 18.5H11.5V20.5H5.5V18.5Z" />
+          {/* Gatillo */}
+          <path d="M11.3 13.5H12.8" />
+        </svg>
+      );
+
+    case 'llaves':
       return (
         <svg {...shared}>
           <path d="M14.7 6.3a4 4 0 0 0 5.1 5.1l-8.4 8.4a2.1 2.1 0 1 1-3-3l8.4-8.4a4 4 0 0 0-5.1-5.1L14.2 5.8 11.4 8.6 8.9 6.1" />
@@ -149,47 +180,10 @@ export function ToolIcon({ icon, className = 'h-6 w-6' }: ToolIconProps) {
         </svg>
       );
 
-    case 'martillo':
-      return (
-        <svg {...shared}>
-          {/* Cabeza del martillo */}
-          <path d="M14.5 5.5L18.5 9.5L15.5 12.5L11.5 8.5L14.5 5.5Z" />
-          <path d="M14.5 5.5C13 4 10.5 3.8 8.5 5.2L11.5 8.5" />
-          {/* Mango */}
-          <path d="M12.8 9.8L4.5 18.1C3.9 18.7 3.9 19.7 4.5 20.3C5.1 20.9 6.1 20.9 6.7 20.3L15 12" />
-        </svg>
-      );
-
-    case 'destornillador':
-      return (
-        <svg {...shared}>
-          {/* Mango */}
-          <path d="M5 19L9.8 14.2" />
-          <path d="M4.2 16.2L7.8 19.8C8.6 20.6 9.8 20.6 10.6 19.8L12.6 17.8C13.4 17 13.4 15.8 12.6 15L9 11.4C8.2 10.6 7 10.6 6.2 11.4L4.2 13.4C3.4 14.2 3.4 15.4 4.2 16.2Z" />
-          {/* Vástago y punta */}
-          <path d="M11.6 12.4L18.2 5.8" />
-          <path d="M17.2 4.8L20 3.8L19.2 6.8L17.2 4.8Z" />
-        </svg>
-      );
-
-    case 'nivel':
-      return (
-        <svg {...shared}>
-          {/* Regla / cuerpo del nivel */}
-          <rect x="2.5" y="8" width="19" height="8" rx="1.8" />
-          {/* Burbuja central */}
-          <rect x="9.2" y="9.8" width="5.6" height="4.4" rx="1" />
-          <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-          {/* Marcas laterales */}
-          <path d="M6 10V14" />
-          <path d="M18 10V14" />
-        </svg>
-      );
-
     case 'medicion':
       return (
         <svg {...shared}>
-          {/* Escuadra / regla */}
+          {/* Escuadra técnica graduada */}
           <path d="M4 20V4H9V15H20V20H4Z" />
           <path d="M4 8H6.5" />
           <path d="M4 12H6.5" />
@@ -199,39 +193,27 @@ export function ToolIcon({ icon, className = 'h-6 w-6' }: ToolIconProps) {
         </svg>
       );
 
-    case 'jardineria':
+    case 'pintura':
       return (
         <svg {...shared}>
-          {/* Tijera de poda */}
-          <circle cx="7" cy="17.5" r="2.5" />
-          <circle cx="17" cy="17.5" r="2.5" />
-          <path d="M8.8 15.6L16.5 5.5" />
-          <path d="M15.2 15.6L7.5 5.5" />
-          <circle cx="12" cy="11.5" r="0.8" fill="currentColor" stroke="none" />
+          {/* Rodillo de pintura industrial */}
+          <rect x="4" y="4" width="13.5" height="5.5" rx="1.4" />
+          <path d="M17.5 6.8H19.5C20.1 6.8 20.5 7.2 20.5 7.8V10.5C20.5 11.3 19.9 12 19 12H12C11.2 12 10.5 12.7 10.5 13.5V15" />
+          {/* Mango del rodillo */}
+          <rect x="9" y="15" width="3" height="5.5" rx="1" />
         </svg>
       );
 
     case 'ferreteria':
       return (
         <svg {...shared}>
-          {/* Tuerca hexagonal */}
+          {/* Tuerca hexagonal industrial */}
           <path d="M12 3.2L19.5 7.6V16.4L12 20.8L4.5 16.4V7.6L12 3.2Z" />
           <circle cx="12" cy="12" r="3.2" />
         </svg>
       );
 
-    case 'soldadora':
-      return (
-        <svg {...shared}>
-          {/* Rayo / equipo eléctrico / soldadora */}
-          <rect x="3.5" y="6" width="17" height="12" rx="2" />
-          <path d="M12.5 8.5L9.5 12.5H12.5L11.5 15.5L14.5 11.5H11.5L12.5 8.5Z" />
-          <path d="M7 18V20" />
-          <path d="M17 18V20" />
-        </svg>
-      );
-
-    case 'generica':
+    case 'caja':
     default:
       return (
         <svg {...shared}>

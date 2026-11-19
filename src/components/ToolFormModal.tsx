@@ -1,4 +1,4 @@
-import { Camera, Trash2, X } from 'lucide-react';
+import { Camera, ImagePlus, Trash2, X } from 'lucide-react';
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Tool,
@@ -10,6 +10,7 @@ import {
 import { compressToolPhoto } from '../utils/imageCompressor';
 import {
   inferToolIcon,
+  normalizeToolIconId,
   TOOL_ICON_OPTIONS,
   ToolIcon,
 } from './ToolIcon';
@@ -57,7 +58,8 @@ export function ToolFormModal({
   const [photoInfo, setPhotoInfo] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editingTool) {
@@ -72,9 +74,9 @@ export function ToolFormModal({
       setFechaPrestamo(
         editingTool.fechaPrestamo || new Date().toISOString().split('T')[0]
       );
-      setIcono(editingTool.icono);
+      setIcono(normalizeToolIconId(editingTool.icono));
       setFoto(editingTool.foto);
-      setPhotoInfo(editingTool.foto ? 'Foto guardada' : null);
+      setPhotoInfo(editingTool.foto ? 'Imagen guardada' : null);
       setPhotoError(null);
     } else {
       setNombre('');
@@ -287,7 +289,7 @@ export function ToolFormModal({
             />
           </div>
 
-          {/* Identificador visual: Foto miniatura opcional o Ícono industrial */}
+          {/* Identificador visual: Imagen/Foto miniatura opcional o Ícono industrial */}
           <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-3.5 dark:border-[#2E3440] dark:bg-[#14171C]">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">
@@ -295,7 +297,7 @@ export function ToolFormModal({
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {foto
-                  ? 'Mostrando foto real'
+                  ? 'Mostrando imagen'
                   : `${activeIconLabel}${icono ? '' : ' (auto)'}`}
               </span>
             </div>
@@ -318,17 +320,27 @@ export function ToolFormModal({
                   <button
                     type="button"
                     disabled={compressing}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => galleryInputRef.current?.click()}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 transition-colors hover:border-[#F59E0B] hover:text-gray-950 disabled:opacity-60 dark:border-[#323946] dark:bg-[#1E2229] dark:text-gray-200 dark:hover:border-[#F59E0B]"
                   >
-                    <Camera className="h-3.5 w-3.5 text-[#F59E0B]" />
+                    <ImagePlus className="h-3.5 w-3.5 text-[#F59E0B]" />
                     <span>
                       {compressing
                         ? 'Optimizando...'
                         : foto
-                          ? 'Cambiar foto'
-                          : 'Subir / Tomar foto'}
+                          ? 'Cambiar imagen'
+                          : 'Subir imagen'}
                     </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={compressing}
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-[#F59E0B] hover:text-gray-950 disabled:opacity-60 dark:border-[#323946] dark:bg-[#1E2229] dark:text-gray-300 dark:hover:border-[#F59E0B] dark:hover:text-white"
+                  >
+                    <Camera className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                    <span>Tomar foto</span>
                   </button>
 
                   {foto && (
@@ -338,20 +350,32 @@ export function ToolFormModal({
                         setFoto(undefined);
                         setPhotoInfo(null);
                       }}
-                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       <span>Quitar</span>
                     </button>
                   )}
 
+                  {/* Selector de galería / archivos (JPG, PNG, WebP, etc.) */}
                   <input
-                    ref={fileInputRef}
+                    ref={galleryInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handlePhotoChange}
                     className="hidden"
-                    aria-label="Seleccionar o tomar foto de la herramienta"
+                    aria-label="Cargar imagen desde archivos o galería"
+                  />
+
+                  {/* Acceso directo a cámara en dispositivos móviles */}
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    aria-label="Tomar fotografía con la cámara"
                   />
                 </div>
 
@@ -365,14 +389,14 @@ export function ToolFormModal({
                   </p>
                 ) : (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Opcional. Se comprime automáticamente para funcionar sin
-                    conexión.
+                    Opcional. Carga cualquier imagen (JPG, PNG, WebP) o toma una
+                    foto; se optimiza automáticamente.
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-6 gap-1.5 border-t border-gray-200/80 pt-3 dark:border-[#2A303A]">
+            <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-gray-200/80 pt-3 dark:border-[#2A303A]">
               {TOOL_ICON_OPTIONS.map((opt) => {
                 const isSelected = effectiveIcon === opt.id;
                 return (
@@ -382,13 +406,19 @@ export function ToolFormModal({
                     title={opt.label}
                     aria-label={`Elegir ícono ${opt.label}`}
                     onClick={() => setIcono(opt.id)}
-                    className={`flex h-9 items-center justify-center rounded-lg border transition-all ${
+                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${
                       isSelected
                         ? 'border-[#F59E0B] bg-[#F59E0B]/15 text-[#B45309] dark:text-[#F59E0B]'
                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-950 dark:border-[#2A303A] dark:bg-[#1E2229] dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200'
                     }`}
                   >
-                    <ToolIcon icon={opt.id} className="h-[18px] w-[18px]" />
+                    <ToolIcon
+                      icon={opt.id}
+                      className="h-[18px] w-[18px] shrink-0"
+                    />
+                    <span className="truncate text-[11px] font-medium leading-tight">
+                      {opt.label}
+                    </span>
                   </button>
                 );
               })}
